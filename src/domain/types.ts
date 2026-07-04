@@ -63,6 +63,10 @@ export type MonthlySummary = {
   netMinor: number;
 };
 
+export type DailyAmountSummary = MonthlySummary & {
+  date: string;
+};
+
 export type TransactionWithCategory = Transaction & {
   categoryName?: string;
 };
