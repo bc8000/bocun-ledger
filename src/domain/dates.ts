@@ -25,6 +25,23 @@ export function getMonthRange(referenceDate = todayISODate()): { start: string; 
   };
 }
 
+export function addDays(isoDate: string, offset: number): string {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  return toISODate(new Date(year, month - 1, day + offset));
+}
+
+export function getRecentDateRange(days: number, referenceDate = todayISODate()): { start: string; end: string; dates: string[] } {
+  const count = Math.max(1, Math.floor(days));
+  const start = addDays(referenceDate, -(count - 1));
+  const dates = Array.from({ length: count }, (_, index) => addDays(start, index));
+
+  return {
+    start,
+    end: referenceDate,
+    dates,
+  };
+}
+
 export function isISODate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
     return false;

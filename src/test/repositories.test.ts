@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createTransaction, deleteTransaction } from '../features/transactions/transactionService';
 import { exportBackup, importBackup } from '../storage/backup';
 import { db, resetDatabase } from '../storage/db';
-import { listCategories, listTransactions, getMonthlySummary } from '../storage/repositories';
+import { listCategories, listTransactions, getDailyAmountSummaries, getMonthlySummary } from '../storage/repositories';
 import { ensureSeedData } from '../storage/seed';
 
 describe('bookkeeping storage flow', () => {
@@ -56,6 +56,31 @@ describe('bookkeeping storage flow', () => {
       expenseMinor: 3500,
       netMinor: 6500,
     });
+  });
+
+  it('summarizes daily amounts for the most recent 30 days', async () => {
+    await ensureSeedData();
+    await createTransaction({ kind: 'income', date: '2026-07-03', amountMinor: 10000 });
+    await createTransaction({ kind: 'expense', date: '2026-07-03', amountMinor: 3500 });
+    await createTransaction({ kind: 'expense', date: '2026-07-04', amountMinor: 1200 });
+    await createTransaction({ kind: 'income', date: '2026-06-04', amountMinor: 9999 });
+
+    const summaries = await getDailyAmountSummaries(30, '2026-07-04');
+
+    expect(summaries).toHaveLength(30);
+    expect(summaries[0].date).toBe('2026-06-05');
+    expect(summaries.at(-1)?.date).toBe('2026-07-04');
+    expect(summaries.find((day) => day.date === '2026-07-03')).toMatchObject({
+      incomeMinor: 10000,
+      expenseMinor: 3500,
+      netMinor: 6500,
+    });
+    expect(summaries.find((day) => day.date === '2026-07-04')).toMatchObject({
+      incomeMinor: 0,
+      expenseMinor: 1200,
+      netMinor: -1200,
+    });
+    expect(summaries.some((day) => day.date === '2026-06-04')).toBe(false);
   });
 
   it('soft-deletes transactions and records a delete change', async () => {
